@@ -1,0 +1,26 @@
+---
+- hosts: localhost
+  become: yes
+
+  tasks:
+
+    - name: Install curl
+      apt:
+        name: curl
+        state: present
+        update_cache: yes
+
+    - name: Install K3s
+      shell: |
+        curl -sfL https://get.k3s.io | sh -
+
+    - name: Wait
+      pause:
+        seconds: 30
+
+    - name: Verify
+      shell: kubectl get nodes
+      register: output
+
+    - debug:
+        var: output.stdout
