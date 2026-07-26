@@ -19,7 +19,7 @@ jobs:
       - name: Configure kubeconfig
         run: |
           mkdir -p ~/.kube
-          echo "${{ secrets.KUBECONFIG }}" > ~/.kube/config
+          echo "${{ secrets.TEST }}" > ~/.kube/config
           chmod 600 ~/.kube/config
 
       - name: Deploy to K3s
