@@ -1,26 +1,55 @@
 ---
 - hosts: localhost
   become: yes
+  gather_facts: yes
+
+  vars:
+    public_ip: "{{ lookup('pipe', 'curl -s ifconfig.me') }}"
 
   tasks:
 
-    - name: Install curl
-      apt:
+    - name: Check if curl is installed
+      command: which curl
+      register: curl_check
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Install curl if not present
+      dnf:
         name: curl
         state: present
-        update_cache: yes
+      when: curl_check.rc != 0
 
     - name: Install K3s
       shell: |
         curl -sfL https://get.k3s.io | sh -
+      args:
+        executable: /bin/bash
+        creates: /usr/local/bin/k3s
+      environment:
+        INSTALL_K3S_EXEC: "server --tls-san {{ public_ip }} --node-external-ip {{ public_ip }} --write-kubeconfig-mode 644"
 
-    - name: Wait
-      pause:
-        seconds: 30
+    - name: Ensure K3s service is running
+      systemd:
+        name: k3s
+        state: started
+        enabled: yes
 
-    - name: Verify
+    - name: Wait until K3s is ready
       shell: kubectl get nodes
-      register: output
+      register: k3s_output
+      retries: 15
+      delay: 10
+      until: k3s_output.rc == 0
 
-    - debug:
-        var: output.stdout
+    - name: Show cluster nodes
+      debug:
+        var: k3s_output.stdout
+
+    - name: Show kubeconfig server
+      shell: grep server /etc/rancher/k3s/k3s.yaml
+      register: kubeconfig_server
+
+    - name: Display kubeconfig server
+      debug:
+        var: kubeconfig_server.stdout
