@@ -17,3 +17,4 @@ spec:
         image: gopinathtask/hello-nginx:latest
         ports:
         - containerPort: 80
+           
